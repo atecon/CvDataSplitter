@@ -1,0 +1,43 @@
+clear 
+set verbose off
+
+include "/home/at/git/ridge/cv_data_generator.inp"
+
+
+# EXAMPLE
+open australia.gdt -q
+
+# Define variables
+series LHS = ldiff(PAU)
+list RHS = const LHS(-1 to -2) ldiff(PUS) IUS(-1 to -2)  IAU(-1 to -2)
+list L = LHS RHS
+
+# Drop missing values
+smpl --no-missing L
+
+# Select sample: 
+scalar use_matrices = 1			# 0: pass a list, 1: pass a matrix
+
+# Initialize empty bundle
+bundle b = null
+
+if use_matrices
+    matrix X = {L}
+    genr index					# when using matrices, you must pass a index vector
+    matrix mindex = {index}
+    b.X = X
+    b.index = mindex    
+else
+    list b.X = L
+endif
+
+# Select cross-validation type (optional)
+#b.cv_type = "loo"				# 'kfold' (default), 'loo'
+
+# Run 
+bundle bout = CvDataGenerator(b)
+print bout
+
+# Print training + test datasets stored as matrices
+eval bout.X_train[2]		# grab array of X for some training set
+eval bout.X_test[2]			# grab array of X for some test set
