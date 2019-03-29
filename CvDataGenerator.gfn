@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gretl-functions>
+<gretl-function-package name="CvDataGenerator" minver="2018a">
+<author email="atecon@posteo.de">Artur Tarassow</author>
+<version>0.1</version>
+<date>2019-03-29</date>
+<description>Compile cross-validation datasets</description>
+<tags>C52</tags>
+<help>
+*** CV-DATA-GENERATOR ***
+
+Package for generating datasets for cross-validation purposes.
+
+Learning parameters of a prediction function is a major objective. In order to avoid
+over-fitting, the model is trained on a different data sample (the 'training set')
+and evaluated out-of-sample on a so called 'test set'. This approach is known as
+cross-validation (CV).
+
+This package comprises different approaches of dividing the raw data set into
+a training and test set, respectively, depending on the nature of the underlying data.
+
+An nice overview can be accessed here:
+https://scikit-learn.org/stable/modules/cross_validation.html
+
+The separated data sets are stored in array of matrices, which can be read-in for the
+original model training and evaluation.
+
+written by: Artur Tarassow (atecon@posteo.de; https://github.com/atecon)
+
+
+
+Public Function:
+================
+CvDataGenerator()
+
+Parameters:
+============
+b		-- bundle, at least including:
+			(a) a list named 'X', or
+			(b) a matrix named 'X' and column vector named 'index'
+			refering to observations (genr index)
+
+cv_type		-- string (optional), Type of cross-validation (CV): 'kfold'
+			(default), 'loo' (Leave-One-Out)
+n_folds  	-- int, divide sample into n_folds of groups of equal size ('kfold' default 5)
+
+
+Returns:
+========
+X_train 	-- array of 'n_folds' matrices, each matrix is of dimension T by (1+k) holding
+		the observation index in the 1st column and the training data for k variables
+		across columns.
+X_test 		-- array of 'n_folds' matrices, each matrix is of dimension T by (1+k)
+		holding the observation index in the 1st column and the test data for k
+		variables across columns.
+</help>
+<gretl-function name="CvDataGenerator" type="bundle">
+ <params count="1">
+  <param name="b" type="bundle"/>
+ </params>
+<code>/*=======================*/
+/* Main package function */
+/*=======================*/
+# Set up the bundle
+bundle self = default_cv_opts()
+if exists(b)
+  # override defaults
+  self = b + self
+endif
+# Initial checks
+#===============
+check_bundle(&amp;self)
+# Drop missings
+#==============
+# TODO: think about how to handle NAs
+#    smpl --no-missing y X
+# Generate an observation index
+#===============================
+if !inbundle(self, &quot;index&quot;) &amp;&amp; (typeof(self.X)==7 || typeof(self.X)==2)
+  genr index
+  self.index = index		# index series for checking that values are related to the right unit
+endif
+# Call evaluation method
+#=======================
+if self.cv_type==&quot;kfold&quot; || self.cv_type==&quot;loo&quot;
+  kfold(&amp;self)
+endif
+return self
+</code>
+</gretl-function>
+<gretl-function name="default_cv_opts" type="bundle" private="1">
+<code># Set default values of the bundle
+bundle self = null
+string self.cv_type = &quot;kfold&quot;		# &quot;kfold&quot;, &quot;rep_kfold&quot;, &quot;loo&quot;, LATER: ['recwin', 'rolwin']
+scalar self.n_folds = 5				# divide sample into k groups of samples (default for kfold = 5)
+#    scalar self.win_size = 0.25*$nobs	# for 'recwin'/'rolwin': initial window lenght
+return self
+</code>
+</gretl-function>
+<gretl-function name="check_bundle" type="void" private="1">
+ <params count="1">
+  <param name="self" type="bundleref"/>
+ </params>
+<code>/* Some initial checks for bundle completeness */
+if !inbundle(self, &quot;X&quot;)
+  funcerr &quot;Provide a list or matrix with data entitled 'X'.&quot;
+endif
+if typeof(self.X)==3		# if matrix
+  if !inbundle(self, &quot;index&quot;)
+    funcerr &quot;Provide a vector holding index observations values (via 'genr index') named 'index'.&quot;
+  elif inbundle(self, &quot;index&quot;)
+    if typeof(self.index)!=3
+      funcerr &quot;Make sure your object 'index' is of type matrix (row vector).&quot;
+    endif
+  endif
+endif
+</code>
+</gretl-function>
+<gretl-function name="gen_xmatrices" type="bundle" private="1">
+ <params count="1">
+  <param name="self" type="bundleref"/>
+ </params>
+<code>/* Helper function for generating an
+array for storing the output */
+matrices self.X_train = array(self.n_folds)
+matrices self.X_test = array(self.n_folds)
+return self
+</code>
+</gretl-function>
+<gretl-function name="kfold" type="bundle" private="1">
+ <params count="1">
+  <param name="self" type="bundleref"/>
+ </params>
+<code>/* Function for running kfold and loo
+Splits data in train/test sets.
+Split dataset into k consecutive folds (without shuffling).
+Each fold can be used once as a validation while the k - 1 remaining
+folds form the training set.
+'loo' is a special case of 'kfold' with a single obs. left-out for each fold
+See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
+*/
+self.n_folds = (self.cv_type==&quot;loo&quot;) ? $nobs : self.n_folds
+# Rsead-in frame
+X = self.X
+# Index
+if typeof(X)==2 || typeof(X)==7
+  series index = self.index
+else
+  matrix index  = self.index
+endif
+# Generate test/trainig arrays
+gen_xmatrices(&amp;self)
+# Lenght of each test sample
+scalar T = (typeof(X)==7) ? $nobs : rows(X)
+scalar self.foldsize = int( T/self.n_folds )		# lengt of test sample
+scalar rest = T - self.n_folds*self.foldsize		# no. of remainder obs for last iteration
+# Initial test set indices
+scalar start = min(index)
+scalar ende = (start+self.foldsize)-1
+# Start looping
+loop i=1..self.n_folds -q
+  # Test set
+  if typeof(X)==7								# For list-based approach
+    series active_set = 0					# don't drop: indicator for current sample
+    smpl index&gt;=start &amp;&amp; index&lt;=ende --restrict
+    #           smpl X --no-missing
+    active_set = 1						# don't drop
+    self.X_test[i] = {index} ~ {X}
+  else					# For matrix-based approach
+    matrix active_set = (index.&gt;=start &amp;&amp; index.&lt;=ende)
+    self.X_test[i] = selifr(index,active_set) ~ selifr(X,active_set)
+  endif
+  # Training set
+  if typeof(X)==7			# For list-based approach
+    smpl active_set==0 --restrict --replace
+    #           smpl X --no-missing
+    self.X_train[i] = {index} ~ {X}
+    smpl full
+  else
+    active_set = (active_set.=1) ? 0 : 1				# select training set
+    self.X_train[i] = selifr(index,active_set) ~ selifr(X,active_set)
+  endif
+  # update start/ ende
+  start += self.foldsize
+  ende = start + self.foldsize-1
+  ende = (i==self.n_folds) ? (ende+rest) : ende
+endloop
+return self
+</code>
+</gretl-function>
+<gretl-function name="cv_time" type="void" private="1">
+ <params count="1">
+  <param name="self" type="bundleref"/>
+ </params>
+<code>/* Function for either rolling or recursive window splits
+See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html#sklearn.model_selection.TimeSeriesSplit
+*/
+</code>
+</gretl-function>
+<sample-script>
+clear 
+set verbose off
+
+include CvDataGenerator.gfn --force
+
+# EXAMPLE
+open australia.gdt -q
+
+# Define variables
+series LHS = ldiff(PAU)
+list RHS = const LHS(-1 to -2) ldiff(PUS) IUS(-1 to -2)  IAU(-1 to -2)
+list L = LHS RHS
+
+# Drop missing values
+smpl --no-missing L
+
+# Select sample: 
+scalar use_matrices = 1			# 0: pass a list, 1: pass a matrix
+
+# Initialize empty bundle
+bundle b = null
+
+if use_matrices
+    matrix X = {L}
+    genr index					# when using matrices, you must pass a index vector
+    matrix mindex = {index}
+    b.X = X
+    b.index = mindex    
+else
+    list b.X = L
+endif
+
+# Select cross-validation type (optional)
+#b.cv_type = &quot;loo&quot;				# 'kfold' (default), 'loo'
+
+# Run 
+bundle bout = CvDataGenerator(b)
+print bout
+
+# Print training + test datasets stored as matrices
+eval bout.X_train[2]		# grab array of X for some training set
+eval bout.X_test[2]			# grab array of X for some test set
+</sample-script>
+</gretl-function-package>
+</gretl-functions>

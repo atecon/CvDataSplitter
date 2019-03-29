@@ -1,8 +1,7 @@
 clear 
 set verbose off
 
-include "/home/at/git/cv_data_generator/cv_data_generator.inp"
-
+include CvDataGenerator.gfn --force
 
 # EXAMPLE
 open australia.gdt -q
