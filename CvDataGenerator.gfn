@@ -25,7 +25,10 @@ https://scikit-learn.org/stable/modules/cross_validation.html
 The separated data sets are stored in array of matrices, which can be read-in for the
 original model training and evaluation.
 
-written by: Artur Tarassow (atecon@posteo.de; https://github.com/atecon)
+Written by: Artur Tarassow (atecon@posteo.de)
+
+Github project page &amp; pull requests:
+https://github.com/atecon/cv_data_generator
 
 
 
