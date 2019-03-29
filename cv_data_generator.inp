@@ -17,8 +17,27 @@
    The separated data sets are stored in array of matrices, which can be read-in for the
    original model training and evaluation.
 
-
    written by: Artur Tarassow (atecon@posteo.de; https://github.com/atecon)
+   
+
+   Parameters:
+   ============
+   b			-- bundle, at least including:
+   #				(a) a list named 'X', or
+   #				(b) a matrix named 'X' and column vector named 'index' refering to observations (genr index)
+
+   cv_type		-- string (optional), Type of cross-validation (CV): 'kfold' (default),
+   #				'loo' (Leave-One-Out)
+   n_folds  	-- int, divide sample into n_folds of groups of equal size ('kfold' default 5)
+   
+   Returns:
+   ========
+   X_train 		-- array of 'n_folds' matrices, each matrix is of dimension T by (1+k) 
+   #   				holding the observation index in the 1st column and the training data for k
+   #				variables across columns.
+   X_test 		-- array of 'n_folds' matrices, each matrix is of dimension T by (1+k) 
+   #   				holding the observation index in the 1st column and the test data for k
+   #				variables across columns.
 */
 
 
@@ -174,3 +193,11 @@ function bundle kfold (bundle *self)
     return self
 end function
 
+
+function void cv_time (bundle *self)
+/* Function for either rolling or recursive window splits
+
+   See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html#sklearn.model_selection.TimeSeriesSplit
+   */
+
+end function
