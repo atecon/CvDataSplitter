@@ -1,4 +1,4 @@
-*** CV-DATA-GENERATOR ***
+*** CV-DATA-SPLITTER ***
 
 Package for generating datasets for cross-validation purposes.
 
@@ -19,13 +19,12 @@ original model training and evaluation.
 Written by: Artur Tarassow (atecon@posteo.de)
 
 Github project page & pull requests:
-https://github.com/atecon/cv_data_generator
-
+https://github.com/atecon/cv_data_splitter
 
 
 Public Function:
 ================
-CvDataGenerator()
+CvDataSplitter()
 
 Parameters:
 ============

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gretl-functions>
-<gretl-function-package name="CvDataGenerator" minver="2018a">
+<gretl-function-package name="CvDataSplitter" minver="2018a">
 <author email="atecon@posteo.de">Artur Tarassow</author>
 <version>0.1</version>
-<date>2019-03-29</date>
+<date>2019-03-31</date>
 <description>Compile cross-validation datasets</description>
 <tags>C52</tags>
 <help>
-*** CV-DATA-GENERATOR ***
+*** CV-DATA-SPLITTER ***
 
 Package for generating datasets for cross-validation purposes.
 
@@ -28,13 +28,12 @@ original model training and evaluation.
 Written by: Artur Tarassow (atecon@posteo.de)
 
 Github project page &amp; pull requests:
-https://github.com/atecon/cv_data_generator
-
+https://github.com/atecon/cv_data_splitter
 
 
 Public Function:
 ================
-CvDataGenerator()
+CvDataSplitter()
 
 Parameters:
 ============
@@ -57,7 +56,7 @@ X_test 		-- array of 'n_folds' matrices, each matrix is of dimension T by (1+k)
 		holding the observation index in the 1st column and the test data for k
 		variables across columns.
 </help>
-<gretl-function name="CvDataGenerator" type="bundle">
+<gretl-function name="CvDataSplitter" type="bundle">
  <params count="1">
   <param name="b" type="bundle"/>
  </params>
@@ -204,7 +203,7 @@ See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.T
 clear 
 set verbose off
 
-include CvDataGenerator.gfn --force
+include CvDataSplitter.gfn --force
 
 # EXAMPLE
 open australia.gdt -q
@@ -237,7 +236,7 @@ endif
 #b.cv_type = &quot;loo&quot;				# 'kfold' (default), 'loo'
 
 # Run 
-bundle bout = CvDataGenerator(b)
+bundle bout = CvDataSplitter(b)
 print bout
 
 # Print training + test datasets stored as matrices

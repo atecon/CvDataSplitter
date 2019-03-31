@@ -1,13 +1,13 @@
 /*
-   *** CV-DATA-GENERATOR ***
+   *** CV-DATA-SPLITTER ***
 
-   Package for generating datasets for cross-validation purposes.
+   Package for splitting datasets for cross-validation purposes.
 
    written by: Artur Tarassow (atecon@posteo.de; https://github.com/atecon)
 */
 
 
-function bundle CvDataGenerator (bundle b)
+function bundle CvDataSplitter (bundle b)
 
     /*=======================*/
     /* Main package function */

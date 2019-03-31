@@ -1,7 +1,7 @@
 clear 
 set verbose off
 
-include CvDataGenerator.gfn --force
+include CvDataSplitter.gfn --force
 
 # EXAMPLE
 open australia.gdt -q
@@ -15,7 +15,7 @@ list L = LHS RHS
 smpl --no-missing L
 
 # Select sample: 
-scalar use_matrices = 1			# 0: pass a list, 1: pass a matrix
+scalar use_matrices = 0		# 0: pass a list, 1: pass a matrix
 
 # Initialize empty bundle
 bundle b = null
@@ -34,7 +34,7 @@ endif
 #b.cv_type = "loo"				# 'kfold' (default), 'loo'
 
 # Run 
-bundle bout = CvDataGenerator(b)
+bundle bout = CvDataSplitter(b)
 print bout
 
 # Print training + test datasets stored as matrices
