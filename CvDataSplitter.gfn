@@ -11,19 +11,20 @@
 
 Package for generating datasets for cross-validation purposes.
 
-Learning parameters of a prediction function is a major objective. In order to avoid
-over-fitting, the model is trained on a different data sample (the 'training set')
-and evaluated out-of-sample on a so called 'test set'. This approach is known as
-cross-validation (CV).
+Learning parameters of a prediction function is a major objective. In order
+to avoid over-fitting, the model is trained on a different data sample 
+(the 'training set') and evaluated out-of-sample on a so called 'test set'.
+This approach is known as cross-validation (CV).
 
 This package comprises different approaches of dividing the raw data set into
-a training and test set, respectively, depending on the nature of the underlying data.
+a training and test set, respectively, depending on the nature of the
+underlying data.
 
 An nice overview can be accessed here:
 https://scikit-learn.org/stable/modules/cross_validation.html
 
-The separated data sets are stored in array of matrices, which can be read-in for the
-original model training and evaluation.
+The separated data sets are stored in array of matrices, which can be read-in
+for the original model training and evaluation.
 
 Written by: Artur Tarassow (atecon@posteo.de)
 
@@ -36,25 +37,31 @@ Public Function:
 CvDataSplitter()
 
 Parameters:
-============
-b		-- bundle, at least including:
-			(a) a list named 'X', or
-			(b) a matrix named 'X' and column vector named 'index'
-			refering to observations (genr index)
+===========
+The user needs to pass a bundle to the function CvDataSplitter() which 
+includes at least:
+(i) A list named 'X' with k series, or a matrix named 'X' with T rows
+and k columns.
+In case a matrix 'X' was passed, the user additionally needs to pass
+(ii) a column vector named 'index' refering to the T observations (can
+be easily generated via gretl by 'genr index').
 
-cv_type		-- string (optional), Type of cross-validation (CV): 'kfold'
-			(default), 'loo' (Leave-One-Out)
-n_folds  	-- int, divide sample into n_folds of groups of equal size ('kfold' default 5)
-
+Additionally, the user can optionally specify the following 2 parameters:
+cv_type		-- string, Type of cross-validation (CV): 'kfold' (default),
+		'loo' (Leave-One-Out)
+n_folds		-- int, divide sample into n_folds of groups of equal
+		size (only relevant for cv_type='kfold';  default 5)
 
 Returns:
-========
-X_train 	-- array of 'n_folds' matrices, each matrix is of dimension T by (1+k) holding
-		the observation index in the 1st column and the training data for k variables
-		across columns.
-X_test 		-- array of 'n_folds' matrices, each matrix is of dimension T by (1+k)
-		holding the observation index in the 1st column and the test data for k
+=========
+The function returns the following information to the bundle:
+X_train		-- array of 'n_folds' matrices, each matrix is of dimension
+		T(i) by (1+k) (for i=1,2,...) holding the observation
+		index in the 1st column and the training data for k
 		variables across columns.
+X_test		-- array of 'n_folds' matrices, each matrix is of dimension
+		T(j) by (1+k) (j=1,2,...) holding the observation index in the
+		1st column and the test data for k variables across columns.
 </help>
 <gretl-function name="CvDataSplitter" type="bundle">
  <params count="1">
@@ -217,7 +224,7 @@ list L = LHS RHS
 smpl --no-missing L
 
 # Select sample: 
-scalar use_matrices = 1			# 0: pass a list, 1: pass a matrix
+scalar use_matrices = 0		# 0: pass a list, 1: pass a matrix
 
 # Initialize empty bundle
 bundle b = null
