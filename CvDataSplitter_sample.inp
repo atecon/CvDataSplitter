@@ -1,14 +1,15 @@
 clear 
 set verbose off
 
-include CvDataSplitter.gfn --force
+#include CvDataSplitter.gfn --force
+include "/home/at/git/cv_data_splitter/CvDataSplitter.inp"
 
 # EXAMPLE
 open australia.gdt -q
 
 # Define variables
 series LHS = ldiff(PAU)
-list RHS = const LHS(-1 to -2) ldiff(PUS) IUS(-1 to -2)  IAU(-1 to -2)
+list RHS = const LHS(-1 to -2) #ldiff(PUS) IUS(-1 to -2)  IAU(-1 to -2)
 list L = LHS RHS
 
 # Drop missing values
@@ -31,7 +32,8 @@ else
 endif
 
 # Select cross-validation type (optional)
-#b.cv_type = "loo"				# 'kfold' (default), 'loo'
+b.cv_type = "loo"				# 'kfold' (default), 'loo', 'recwin', 'rolwin'
+
 
 # Run 
 bundle bout = CvDataSplitter(b)
