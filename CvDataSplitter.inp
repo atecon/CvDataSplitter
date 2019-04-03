@@ -189,11 +189,11 @@ function bundle timefold (bundle *self)
 
     # Initial test set indices
     scalar start = min(index)
-    scalar ende = (start+self.foldsize)-1
+    scalar ende = start + self.foldsize - 1
 
     # Start looping
     loop i=1..self.n_folds -q
-        printf "\nStart=%d \t Ende=%d\n", start, ende
+#        printf "\nStart=%d \t Ende=%d\n", start, ende
         
         # Training set
         if typeof(X)==7								# For list-based approach
@@ -225,3 +225,4 @@ function bundle timefold (bundle *self)
     
     return self
 end function
+
