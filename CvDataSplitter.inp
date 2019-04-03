@@ -3,22 +3,20 @@
 
    Package for splitting datasets for cross-validation purposes.
 
-   written by: Artur Tarassow (atecon@posteo.de; https://github.com/atecon)
+   written by: Artur Tarassow (atecon@posteo.de; https://github.com/atecon/cv_data_splitter)
 */
 
 
-function bundle CvDataSplitter (bundle b)
+function bundle CvDataSplitter (bundle *b)
 
     /*=======================*/
     /* Main package function */
     /*=======================*/
 
     # Set up the bundle
+    #==================
     bundle self = default_cv_opts()
-    if exists(b)
-        # override defaults
-        self = b + self
-    endif
+    self = b + self		    		# override defaults
 
     # Initial checks
     #===============
@@ -86,6 +84,11 @@ function bundle gen_xmatrices (bundle *self)
     return self
 end function
 
+function scalar get_T(bundle *self)
+    /* Helper function returning no. of observations */
+    return (typeof(self.X)==7) ? $nobs : rows(self.X)
+end function
+
 
 function bundle kfold (bundle *self)
 /* Function for running kfold and loo
@@ -100,7 +103,7 @@ function bundle kfold (bundle *self)
    See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
     */
 
-
+    # No. of folds
     self.n_folds = (self.cv_type=="loo") ? $nobs : self.n_folds
 
     # Read-in frame
@@ -116,23 +119,22 @@ function bundle kfold (bundle *self)
     gen_xmatrices(&self)
 
     # Lenght of each test sample
-    scalar T = (typeof(X)==7) ? $nobs : rows(X)
-    scalar self.foldsize = int( T/self.n_folds )		# lengt of test sample
+    scalar T = get_T(&self)
+    scalar self.foldsize = int(T/self.n_folds)			# lengt of test sample
     scalar rest = T - self.n_folds*self.foldsize		# no. of remainder obs for last iteration
 
     # Initial test set indices
     scalar start = min(index)
-    scalar ende = (start+self.foldsize)-1
+    scalar ende = start + self.foldsize - 1
 
     # Start looping
     loop i=1..self.n_folds -q
-        #printf "\nStart=%d \t Ende=%d\n", start, ende
         
         # Test set
         if typeof(X)==7								# For list-based approach
             series active_set = 0					# don't drop: indicator for current sample
             smpl index>=start && index<=ende --restrict
-            active_set = 1						# don't drop
+            active_set = 1							# don't drop
             self.X_test[i] = {index} ~ {X}
 
         else					# For matrix-based approach
@@ -162,12 +164,12 @@ end function
 
 
 function bundle timefold (bundle *self)
-/* Function for either rolling or recursive window splits
-
-   See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html#sklearn.model_selection.TimeSeriesSplit
+    /* Function for either rolling or recursive window splits when working
+    with time-series data.
+    See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html#sklearn.model_selection.TimeSeriesSplit
     */
 
-    # Rsead-in frame
+    # Read-in frame
     X = self.X
     # Index
     if typeof(X)==2 || typeof(X)==7
@@ -177,7 +179,7 @@ function bundle timefold (bundle *self)
     endif
 
     # Lenght of each test sample
-    scalar T = (typeof(X)==7) ? $nobs : rows(X)
+    scalar T = get_T(&self)
     scalar self.foldsize = self.win_size			# lengt of (initial) test sample
     #    scalar rest = T-self.n_folds*self.foldsize	# no. of remainder obs for last iteration
 

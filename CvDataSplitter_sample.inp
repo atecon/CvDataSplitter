@@ -32,11 +32,11 @@ else
 endif
 
 # Select cross-validation type (optional)
-b.cv_type = "loo"				# 'kfold' (default), 'loo', 'recwin', 'rolwin'
+b.cv_type = "recwin"				# 'kfold' (default), 'loo', 'recwin', 'rolwin'
 
 
-# Run 
-bundle bout = CvDataSplitter(b)
+# Pass bundle 'b' in pointer form + run
+bundle bout = CvDataSplitter(&b)
 print bout
 
 # Print training + test datasets stored as matrices
