@@ -46,7 +46,8 @@ cv_type		-- string, Type of cross-validation (CV):
 		for TS data)
 
 n_folds		-- int, divide sample into n_folds of groups of equal
-		size (only relevant for cv_type='kfold';  default 5)
+		size (can only be set for cv_type='kfold' (default 5);
+		otherwise determined by the respective CV procedure)
 
 win_size	-- int, (Initial) Window-width for moving-window related
 		methods 'rolwin' and 'recwin' (default 25 pct. of total
