@@ -3,22 +3,20 @@
 
    Package for splitting datasets for cross-validation purposes.
 
-   written by: Artur Tarassow (atecon@posteo.de; https://github.com/atecon)
+   written by: Artur Tarassow (atecon@posteo.de; https://github.com/atecon/cv_data_splitter)
 */
 
 
-function bundle CvDataSplitter (bundle b)
+function void CvDataSplitter (bundle *self)
 
     /*=======================*/
     /* Main package function */
     /*=======================*/
 
     # Set up the bundle
-    bundle self = default_cv_opts()
-    if exists(b)
-        # override defaults
-        self = b + self
-    endif
+    #==================
+    bundle b = default_cv_opts()
+    self = self + b		    		# override defaults
 
     # Initial checks
     #===============
@@ -40,19 +38,40 @@ function bundle CvDataSplitter (bundle b)
     #=======================
     if self.cv_type=="kfold" || self.cv_type=="loo"
         kfold(&self)
+    elif self.cv_type=="recwin" || self.cv_type=="rolwin"
+        timefold(&self)
     endif
 
-    return self
+    # Clear some bundle elements
+    clear_bundle(&self)
+
+end function
+
+
+function void clear_bundle(bundle *self)
+    /* Helper function for dropping some bundle elements
+    before returning */
+
+    delete self.X
+    delete self.index
+
+    if self.cv_type!="recwin" || self.cv_type!="rolwin" 
+        delete self.win_size
+    endif
+    if self.cv_type=="recwin"
+        delete self.foldsize
+    endif
+        
 end function
 
 
 function bundle default_cv_opts (void)
-    
+
     # Set default values of the bundle
     bundle self = null
-    string self.cv_type = "kfold"		# "kfold", "rep_kfold", "loo", LATER: ['recwin', 'rolwin']
+    string self.cv_type = "kfold"		# "kfold", "rep_kfold", "loo", "recwin", "rolwin"
     scalar self.n_folds = 5				# divide sample into k groups of samples (default for kfold = 5)
-#    scalar self.win_size = 0.25*$nobs	# for 'recwin'/'rolwin': initial window lenght
+    scalar self.win_size = int(0.25*$nobs)	# for 'recwin'/'rolwin': initial window lenght
 
     return self
 end function
@@ -60,7 +79,6 @@ end function
 
 function void check_bundle (bundle *self)
     /* Some initial checks for bundle completeness */
-
     if !inbundle(self, "X")
         funcerr "Provide a list or matrix with data entitled 'X'."
     endif
@@ -76,32 +94,36 @@ function void check_bundle (bundle *self)
 end function
 
 
-function bundle gen_xmatrices (bundle *self)
-    /* Helper function for generating an
-    array for storing the output */    
+function void gen_xmatrices (bundle *self)
+/* Helper function for generating an
+    array for storing the output */
     matrices self.X_train = array(self.n_folds)
     matrices self.X_test = array(self.n_folds)
-    return self
+end function
+
+function scalar get_T(bundle *self)
+    /* Helper function returning no. of observations */
+    return (typeof(self.X)==7) ? $nobs : rows(self.X)
 end function
 
 
-function bundle kfold (bundle *self)
+function void kfold (bundle *self)
 /* Function for running kfold and loo
 
    Splits data in train/test sets.
    Split dataset into k consecutive folds (without shuffling).
    Each fold can be used once as a validation while the k - 1 remaining
    folds form the training set.
-   
+
    'loo' is a special case of 'kfold' with a single obs. left-out for each fold
 
    See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
-   */
+    */
 
-
+    # No. of folds
     self.n_folds = (self.cv_type=="loo") ? $nobs : self.n_folds
 
-    # Rsead-in frame
+    # Read-in frame
     X = self.X
     # Index
     if typeof(X)==2 || typeof(X)==7
@@ -109,28 +131,27 @@ function bundle kfold (bundle *self)
     else
         matrix index  = self.index
     endif
-    
+
     # Generate test/trainig arrays
     gen_xmatrices(&self)
 
     # Lenght of each test sample
-    scalar T = (typeof(X)==7) ? $nobs : rows(X)
-    scalar self.foldsize = int( T/self.n_folds )		# lengt of test sample
+    scalar T = get_T(&self)
+    scalar self.foldsize = int(T/self.n_folds)			# lengt of test sample
     scalar rest = T - self.n_folds*self.foldsize		# no. of remainder obs for last iteration
 
     # Initial test set indices
     scalar start = min(index)
-    scalar ende = (start+self.foldsize)-1
+    scalar ende = start + self.foldsize - 1
 
     # Start looping
     loop i=1..self.n_folds -q
-
+        
         # Test set
         if typeof(X)==7								# For list-based approach
             series active_set = 0					# don't drop: indicator for current sample
             smpl index>=start && index<=ende --restrict
-            #           smpl X --no-missing
-            active_set = 1						# don't drop
+            active_set = 1							# don't drop
             self.X_test[i] = {index} ~ {X}
 
         else					# For matrix-based approach
@@ -141,7 +162,6 @@ function bundle kfold (bundle *self)
         # Training set
         if typeof(X)==7			# For list-based approach
             smpl active_set==0 --restrict --replace
-            #           smpl X --no-missing
             self.X_train[i] = {index} ~ {X}
             smpl full
 
@@ -156,14 +176,68 @@ function bundle kfold (bundle *self)
         ende = (i==self.n_folds) ? (ende+rest) : ende
     endloop
 
-    return self
 end function
 
 
-function void cv_time (bundle *self)
-/* Function for either rolling or recursive window splits
+function void timefold (bundle *self)
+    /* Function for either rolling or recursive window splits when working
+    with time-series data.
+    See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html#sklearn.model_selection.TimeSeriesSplit
+    */
 
-   See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html#sklearn.model_selection.TimeSeriesSplit
-   */
+    # Read-in frame
+    X = self.X
+    # Index
+    if typeof(X)==2 || typeof(X)==7
+        series index = self.index
+    else
+        matrix index  = self.index
+    endif
 
+    # Lenght of each test sample
+    scalar T = get_T(&self)
+    scalar self.foldsize = self.win_size			# lengt of (initial) test sample
+    #    scalar rest = T-self.n_folds*self.foldsize	# no. of remainder obs for last iteration
+
+    # Generate test/trainig arrays
+    scalar self.n_folds = T-self.foldsize		# T-1 training sets can be compiled
+    gen_xmatrices(&self)
+
+    # Initial test set indices
+    scalar start = min(index)
+    scalar ende = start + self.foldsize - 1
+
+    # Start looping
+    loop i=1..self.n_folds -q
+#        printf "\nStart=%d \t Ende=%d\n", start, ende
+        
+        # Training set
+        if typeof(X)==7								# For list-based approach
+            series active_set = 0					# don't drop: indicator for current sample
+            smpl index>=start && index<=ende --restrict --replace
+            active_set = 1						# don't drop
+            self.X_train[i] = {index} ~ {X}
+
+        else					# For matrix-based approach
+            matrix active_set = (index.>=start && index.<=ende)
+            self.X_train[i] = selifr(index,active_set) ~ selifr(X,active_set)
+        endif
+
+        # Test set
+        if typeof(X)==7			# For list-based approach
+            smpl index>ende --restrict --replace
+            self.X_test[i] = {index} ~ {X}
+            smpl full
+
+        else
+            active_set = (index.>ende)
+            self.X_test[i] = selifr(index,active_set) ~ selifr(X,active_set)
+        endif
+
+        # update start/ ende
+        start = (self.cv_type=="rolwin") ? (start+1) : start
+        ende++
+    endloop
+    
 end function
+

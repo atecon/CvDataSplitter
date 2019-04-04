@@ -38,8 +38,8 @@ CvDataSplitter()
 
 Parameters:
 ===========
-The user needs to pass a bundle to the function CvDataSplitter() which 
-includes at least:
+The user needs to pass some bundle 'b' in pointer form to the function
+CvDataSplitter(), e.g. &lt;CvDataSplitter(&amp;b)&gt;, which includes at least:
 (i) A list named 'X' with k series, or a matrix named 'X' with T rows
 and k columns.
 In case a matrix 'X' was passed, the user additionally needs to pass
@@ -47,14 +47,24 @@ In case a matrix 'X' was passed, the user additionally needs to pass
 be easily generated via gretl by 'genr index').
 
 Additionally, the user can optionally specify the following 2 parameters:
-cv_type		-- string, Type of cross-validation (CV): 'kfold' (default),
-		'loo' (Leave-One-Out)
+cv_type		-- string, Type of cross-validation (CV):
+		(i) 'kfold' (default),
+		(ii) 'loo' (Leave-One-Out)
+		(iii) 'recwin' (recursive window for time-series (TS) data)
+		(iv) 'rolwin' (rolling window using a fixed window-width
+		for TS data)
+
 n_folds		-- int, divide sample into n_folds of groups of equal
-		size (only relevant for cv_type='kfold';  default 5)
+		size (can only be set for cv_type='kfold' (default 5);
+		otherwise determined by the respective CV procedure)
+
+win_size	-- int, (Initial) Window-width for moving-window related
+		methods 'rolwin' and 'recwin' (default 25 pct. of total
+		valid observations)
 
 Returns:
 =========
-The function returns the following information to the bundle:
+The function returns the following information to the bundle 'b':
 X_train		-- array of 'n_folds' matrices, each matrix is of dimension
 		T(i) by (1+k) (for i=1,2,...) holding the observation
 		index in the 1st column and the training data for k
@@ -63,19 +73,17 @@ X_test		-- array of 'n_folds' matrices, each matrix is of dimension
 		T(j) by (1+k) (j=1,2,...) holding the observation index in the
 		1st column and the test data for k variables across columns.
 </help>
-<gretl-function name="CvDataSplitter" type="bundle">
+<gretl-function name="CvDataSplitter" type="void">
  <params count="1">
-  <param name="b" type="bundle"/>
+  <param name="self" type="bundleref"/>
  </params>
 <code>/*=======================*/
 /* Main package function */
 /*=======================*/
 # Set up the bundle
-bundle self = default_cv_opts()
-if exists(b)
-  # override defaults
-  self = b + self
-endif
+#==================
+bundle b = default_cv_opts()
+self = self + b		    		# override defaults
 # Initial checks
 #===============
 check_bundle(&amp;self)
@@ -93,16 +101,35 @@ endif
 #=======================
 if self.cv_type==&quot;kfold&quot; || self.cv_type==&quot;loo&quot;
   kfold(&amp;self)
+elif self.cv_type==&quot;recwin&quot; || self.cv_type==&quot;rolwin&quot;
+  timefold(&amp;self)
 endif
-return self
+# Clear some bundle elements
+clear_bundle(&amp;self)
+</code>
+</gretl-function>
+<gretl-function name="clear_bundle" type="void" private="1">
+ <params count="1">
+  <param name="self" type="bundleref"/>
+ </params>
+<code>/* Helper function for dropping some bundle elements
+before returning */
+delete self.X
+delete self.index
+if self.cv_type!=&quot;recwin&quot; || self.cv_type!=&quot;rolwin&quot;
+  delete self.win_size
+endif
+if self.cv_type==&quot;recwin&quot;
+  delete self.foldsize
+endif
 </code>
 </gretl-function>
 <gretl-function name="default_cv_opts" type="bundle" private="1">
 <code># Set default values of the bundle
 bundle self = null
-string self.cv_type = &quot;kfold&quot;		# &quot;kfold&quot;, &quot;rep_kfold&quot;, &quot;loo&quot;, LATER: ['recwin', 'rolwin']
+string self.cv_type = &quot;kfold&quot;		# &quot;kfold&quot;, &quot;rep_kfold&quot;, &quot;loo&quot;, &quot;recwin&quot;, &quot;rolwin&quot;
 scalar self.n_folds = 5				# divide sample into k groups of samples (default for kfold = 5)
-#    scalar self.win_size = 0.25*$nobs	# for 'recwin'/'rolwin': initial window lenght
+scalar self.win_size = int(0.25*$nobs)	# for 'recwin'/'rolwin': initial window lenght
 return self
 </code>
 </gretl-function>
@@ -125,7 +152,7 @@ if typeof(self.X)==3		# if matrix
 endif
 </code>
 </gretl-function>
-<gretl-function name="gen_xmatrices" type="bundle" private="1">
+<gretl-function name="gen_xmatrices" type="void" private="1">
  <params count="1">
   <param name="self" type="bundleref"/>
  </params>
@@ -133,10 +160,17 @@ endif
 array for storing the output */
 matrices self.X_train = array(self.n_folds)
 matrices self.X_test = array(self.n_folds)
-return self
 </code>
 </gretl-function>
-<gretl-function name="kfold" type="bundle" private="1">
+<gretl-function name="get_T" type="scalar" private="1">
+ <params count="1">
+  <param name="self" type="bundleref"/>
+ </params>
+<code>/* Helper function returning no. of observations */
+return (typeof(self.X)==7) ? $nobs : rows(self.X)
+</code>
+</gretl-function>
+<gretl-function name="kfold" type="void" private="1">
  <params count="1">
   <param name="self" type="bundleref"/>
  </params>
@@ -148,8 +182,9 @@ folds form the training set.
 'loo' is a special case of 'kfold' with a single obs. left-out for each fold
 See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
 */
+# No. of folds
 self.n_folds = (self.cv_type==&quot;loo&quot;) ? $nobs : self.n_folds
-# Rsead-in frame
+# Read-in frame
 X = self.X
 # Index
 if typeof(X)==2 || typeof(X)==7
@@ -160,20 +195,19 @@ endif
 # Generate test/trainig arrays
 gen_xmatrices(&amp;self)
 # Lenght of each test sample
-scalar T = (typeof(X)==7) ? $nobs : rows(X)
-scalar self.foldsize = int( T/self.n_folds )		# lengt of test sample
+scalar T = get_T(&amp;self)
+scalar self.foldsize = int(T/self.n_folds)			# lengt of test sample
 scalar rest = T - self.n_folds*self.foldsize		# no. of remainder obs for last iteration
 # Initial test set indices
 scalar start = min(index)
-scalar ende = (start+self.foldsize)-1
+scalar ende = start + self.foldsize - 1
 # Start looping
 loop i=1..self.n_folds -q
   # Test set
   if typeof(X)==7								# For list-based approach
     series active_set = 0					# don't drop: indicator for current sample
     smpl index&gt;=start &amp;&amp; index&lt;=ende --restrict
-    #           smpl X --no-missing
-    active_set = 1						# don't drop
+    active_set = 1							# don't drop
     self.X_test[i] = {index} ~ {X}
   else					# For matrix-based approach
     matrix active_set = (index.&gt;=start &amp;&amp; index.&lt;=ende)
@@ -182,7 +216,6 @@ loop i=1..self.n_folds -q
   # Training set
   if typeof(X)==7			# For list-based approach
     smpl active_set==0 --restrict --replace
-    #           smpl X --no-missing
     self.X_train[i] = {index} ~ {X}
     smpl full
   else
@@ -194,16 +227,60 @@ loop i=1..self.n_folds -q
   ende = start + self.foldsize-1
   ende = (i==self.n_folds) ? (ende+rest) : ende
 endloop
-return self
 </code>
 </gretl-function>
-<gretl-function name="cv_time" type="void" private="1">
+<gretl-function name="timefold" type="void" private="1">
  <params count="1">
   <param name="self" type="bundleref"/>
  </params>
-<code>/* Function for either rolling or recursive window splits
+<code>/* Function for either rolling or recursive window splits when working
+with time-series data.
 See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html#sklearn.model_selection.TimeSeriesSplit
 */
+# Read-in frame
+X = self.X
+# Index
+if typeof(X)==2 || typeof(X)==7
+  series index = self.index
+else
+  matrix index  = self.index
+endif
+# Lenght of each test sample
+scalar T = get_T(&amp;self)
+scalar self.foldsize = self.win_size			# lengt of (initial) test sample
+#    scalar rest = T-self.n_folds*self.foldsize	# no. of remainder obs for last iteration
+# Generate test/trainig arrays
+scalar self.n_folds = T-self.foldsize		# T-1 training sets can be compiled
+gen_xmatrices(&amp;self)
+# Initial test set indices
+scalar start = min(index)
+scalar ende = start + self.foldsize - 1
+# Start looping
+loop i=1..self.n_folds -q
+  #        printf &quot;\nStart=%d \t Ende=%d\n&quot;, start, ende
+  # Training set
+  if typeof(X)==7								# For list-based approach
+    series active_set = 0					# don't drop: indicator for current sample
+    smpl index&gt;=start &amp;&amp; index&lt;=ende --restrict --replace
+    active_set = 1						# don't drop
+    self.X_train[i] = {index} ~ {X}
+  else					# For matrix-based approach
+    matrix active_set = (index.&gt;=start &amp;&amp; index.&lt;=ende)
+    self.X_train[i] = selifr(index,active_set) ~ selifr(X,active_set)
+  endif
+  # Test set
+  if typeof(X)==7			# For list-based approach
+    smpl index&gt;ende --restrict --replace
+    self.X_test[i] = {index} ~ {X}
+    smpl full
+  else
+    active_set = (index.&gt;ende)
+    self.X_test[i] = selifr(index,active_set) ~ selifr(X,active_set)
+  endif
+  # update start/ ende
+  start = (self.cv_type==&quot;rolwin&quot;) ? (start+1) : start
+  ende++
+endloop
 </code>
 </gretl-function>
 <sample-script>
@@ -213,20 +290,25 @@ set verbose off
 include CvDataSplitter.gfn --force
 
 # EXAMPLE
+#=========
 open australia.gdt -q
 
 # Define variables
+#------------------
 series LHS = ldiff(PAU)
-list RHS = const LHS(-1 to -2) ldiff(PUS) IUS(-1 to -2)  IAU(-1 to -2)
+list RHS = const LHS(-1 to -2) #ldiff(PUS) IUS(-1 to -2)  IAU(-1 to -2)
 list L = LHS RHS
 
 # Drop missing values
+#---------------------
 smpl --no-missing L
 
-# Select sample: 
-scalar use_matrices = 0		# 0: pass a list, 1: pass a matrix
+# Select method:
+#---------------
+scalar use_matrices = 0			# 0: pass a list, 1: pass a matrix
 
 # Initialize empty bundle
+#-------------------------
 bundle b = null
 
 if use_matrices
@@ -240,15 +322,22 @@ else
 endif
 
 # Select cross-validation type (optional)
-#b.cv_type = &quot;loo&quot;				# 'kfold' (default), 'loo'
+#-----------------------------------------
+# b.win_size = 6				# optional: window-width for 'recwin'/'rolwin'
+# b.n_folds = 3			# optional: divide sample into n_folds of groups for 'kfold'
+# b.cv_type = &quot;rolwin&quot;			# 'kfold' (default), 'loo', 'recwin', 'rolwin'
 
-# Run 
-bundle bout = CvDataSplitter(b)
-print bout
+
+# Pass bundle 'b' in pointer form + run
+#---------------------------------------
+CvDataSplitter(&amp;b)
+print b
+
 
 # Print training + test datasets stored as matrices
-eval bout.X_train[2]		# grab array of X for some training set
-eval bout.X_test[2]			# grab array of X for some test set
+#--------------------------------------------------
+eval b.X_train[3]		# grab array of X for some training set
+eval b.X_test[3]		# grab array of X for some test set
 </sample-script>
 </gretl-function-package>
 </gretl-functions>

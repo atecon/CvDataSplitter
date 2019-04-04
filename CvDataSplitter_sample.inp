@@ -4,20 +4,25 @@ set verbose off
 include CvDataSplitter.gfn --force
 
 # EXAMPLE
+#=========
 open australia.gdt -q
 
 # Define variables
+#------------------
 series LHS = ldiff(PAU)
-list RHS = const LHS(-1 to -2) ldiff(PUS) IUS(-1 to -2)  IAU(-1 to -2)
+list RHS = const LHS(-1 to -2) #ldiff(PUS) IUS(-1 to -2)  IAU(-1 to -2)
 list L = LHS RHS
 
 # Drop missing values
+#---------------------
 smpl --no-missing L
 
-# Select sample: 
-scalar use_matrices = 0		# 0: pass a list, 1: pass a matrix
+# Select method:
+#---------------
+scalar use_matrices = 0			# 0: pass a list, 1: pass a matrix
 
 # Initialize empty bundle
+#-------------------------
 bundle b = null
 
 if use_matrices
@@ -31,12 +36,19 @@ else
 endif
 
 # Select cross-validation type (optional)
-#b.cv_type = "loo"				# 'kfold' (default), 'loo'
+#-----------------------------------------
+# b.win_size = 6				# optional: window-width for 'recwin'/'rolwin'
+# b.n_folds = 3			# optional: divide sample into n_folds of groups for 'kfold'
+# b.cv_type = "rolwin"			# 'kfold' (default), 'loo', 'recwin', 'rolwin'
 
-# Run 
-bundle bout = CvDataSplitter(b)
-print bout
+
+# Pass bundle 'b' in pointer form + run
+#---------------------------------------
+CvDataSplitter(&b)
+print b
+
 
 # Print training + test datasets stored as matrices
-eval bout.X_train[2]		# grab array of X for some training set
-eval bout.X_test[2]			# grab array of X for some test set
+#--------------------------------------------------
+eval b.X_train[3]		# grab array of X for some training set
+eval b.X_test[3]		# grab array of X for some test set

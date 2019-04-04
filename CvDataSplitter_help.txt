@@ -29,8 +29,8 @@ CvDataSplitter()
 
 Parameters:
 ===========
-The user needs to pass a bundle to the function CvDataSplitter() which 
-includes at least:
+The user needs to pass some bundle 'b' in pointer form to the function
+CvDataSplitter(), e.g. <CvDataSplitter(&b)>, which includes at least:
 (i) A list named 'X' with k series, or a matrix named 'X' with T rows
 and k columns.
 In case a matrix 'X' was passed, the user additionally needs to pass
@@ -38,14 +38,24 @@ In case a matrix 'X' was passed, the user additionally needs to pass
 be easily generated via gretl by 'genr index').
 
 Additionally, the user can optionally specify the following 2 parameters:
-cv_type		-- string, Type of cross-validation (CV): 'kfold' (default),
-		'loo' (Leave-One-Out)
+cv_type		-- string, Type of cross-validation (CV):
+		(i) 'kfold' (default),
+		(ii) 'loo' (Leave-One-Out)
+		(iii) 'recwin' (recursive window for time-series (TS) data)
+		(iv) 'rolwin' (rolling window using a fixed window-width
+		for TS data)
+
 n_folds		-- int, divide sample into n_folds of groups of equal
-		size (only relevant for cv_type='kfold';  default 5)
+		size (can only be set for cv_type='kfold' (default 5);
+		otherwise determined by the respective CV procedure)
+
+win_size	-- int, (Initial) Window-width for moving-window related
+		methods 'rolwin' and 'recwin' (default 25 pct. of total
+		valid observations)
 
 Returns:
 =========
-The function returns the following information to the bundle:
+The function returns the following information to the bundle 'b':
 X_train		-- array of 'n_folds' matrices, each matrix is of dimension
 		T(i) by (1+k) (for i=1,2,...) holding the observation
 		index in the 1st column and the training data for k
