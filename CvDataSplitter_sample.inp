@@ -1,8 +1,7 @@
 clear 
 set verbose off
 
-#include CvDataSplitter.gfn --force
-include "/home/at/git/cv_data_splitter/CvDataSplitter.inp"
+include CvDataSplitter.gfn --force
 
 # EXAMPLE
 #=========

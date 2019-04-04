@@ -38,8 +38,8 @@ CvDataSplitter()
 
 Parameters:
 ===========
-The user needs to pass a bundle in pointer form to the function
-CvDataSplitter() which includes at least:
+The user needs to pass some bundle 'b' in pointer form to the function
+CvDataSplitter(), e.g. &lt;CvDataSplitter(&amp;b)&gt;, which includes at least:
 (i) A list named 'X' with k series, or a matrix named 'X' with T rows
 and k columns.
 In case a matrix 'X' was passed, the user additionally needs to pass
@@ -55,7 +55,8 @@ cv_type		-- string, Type of cross-validation (CV):
 		for TS data)
 
 n_folds		-- int, divide sample into n_folds of groups of equal
-		size (only relevant for cv_type='kfold';  default 5)
+		size (can only be set for cv_type='kfold' (default 5);
+		otherwise determined by the respective CV procedure)
 
 win_size	-- int, (Initial) Window-width for moving-window related
 		methods 'rolwin' and 'recwin' (default 25 pct. of total
@@ -63,7 +64,7 @@ win_size	-- int, (Initial) Window-width for moving-window related
 
 Returns:
 =========
-The function returns the following information to the bundle:
+The function returns the following information to the bundle 'b':
 X_train		-- array of 'n_folds' matrices, each matrix is of dimension
 		T(i) by (1+k) (for i=1,2,...) holding the observation
 		index in the 1st column and the training data for k
@@ -72,17 +73,17 @@ X_test		-- array of 'n_folds' matrices, each matrix is of dimension
 		T(j) by (1+k) (j=1,2,...) holding the observation index in the
 		1st column and the test data for k variables across columns.
 </help>
-<gretl-function name="CvDataSplitter" type="bundle">
+<gretl-function name="CvDataSplitter" type="void">
  <params count="1">
-  <param name="b" type="bundleref"/>
+  <param name="self" type="bundleref"/>
  </params>
 <code>/*=======================*/
 /* Main package function */
 /*=======================*/
 # Set up the bundle
 #==================
-bundle self = default_cv_opts()
-self = b + self		    		# override defaults
+bundle b = default_cv_opts()
+self = self + b		    		# override defaults
 # Initial checks
 #===============
 check_bundle(&amp;self)
@@ -103,7 +104,24 @@ if self.cv_type==&quot;kfold&quot; || self.cv_type==&quot;loo&quot;
 elif self.cv_type==&quot;recwin&quot; || self.cv_type==&quot;rolwin&quot;
   timefold(&amp;self)
 endif
-return self
+# Clear some bundle elements
+clear_bundle(&amp;self)
+</code>
+</gretl-function>
+<gretl-function name="clear_bundle" type="void" private="1">
+ <params count="1">
+  <param name="self" type="bundleref"/>
+ </params>
+<code>/* Helper function for dropping some bundle elements
+before returning */
+delete self.X
+delete self.index
+if self.cv_type!=&quot;recwin&quot; || self.cv_type!=&quot;rolwin&quot;
+  delete self.win_size
+endif
+if self.cv_type==&quot;recwin&quot;
+  delete self.foldsize
+endif
 </code>
 </gretl-function>
 <gretl-function name="default_cv_opts" type="bundle" private="1">
@@ -134,7 +152,7 @@ if typeof(self.X)==3		# if matrix
 endif
 </code>
 </gretl-function>
-<gretl-function name="gen_xmatrices" type="bundle" private="1">
+<gretl-function name="gen_xmatrices" type="void" private="1">
  <params count="1">
   <param name="self" type="bundleref"/>
  </params>
@@ -142,7 +160,6 @@ endif
 array for storing the output */
 matrices self.X_train = array(self.n_folds)
 matrices self.X_test = array(self.n_folds)
-return self
 </code>
 </gretl-function>
 <gretl-function name="get_T" type="scalar" private="1">
@@ -153,7 +170,7 @@ return self
 return (typeof(self.X)==7) ? $nobs : rows(self.X)
 </code>
 </gretl-function>
-<gretl-function name="kfold" type="bundle" private="1">
+<gretl-function name="kfold" type="void" private="1">
  <params count="1">
   <param name="self" type="bundleref"/>
  </params>
@@ -210,10 +227,9 @@ loop i=1..self.n_folds -q
   ende = start + self.foldsize-1
   ende = (i==self.n_folds) ? (ende+rest) : ende
 endloop
-return self
 </code>
 </gretl-function>
-<gretl-function name="timefold" type="bundle" private="1">
+<gretl-function name="timefold" type="void" private="1">
  <params count="1">
   <param name="self" type="bundleref"/>
  </params>
@@ -265,7 +281,6 @@ loop i=1..self.n_folds -q
   start = (self.cv_type==&quot;rolwin&quot;) ? (start+1) : start
   ende++
 endloop
-return self
 </code>
 </gretl-function>
 <sample-script>
@@ -273,7 +288,6 @@ clear
 set verbose off
 
 include CvDataSplitter.gfn --force
-#include &quot;/home/at/git/cv_data_splitter/CvDataSplitter.inp&quot;
 
 # EXAMPLE
 #=========
@@ -291,7 +305,7 @@ smpl --no-missing L
 
 # Select method:
 #---------------
-scalar use_matrices = 0		# 0: pass a list, 1: pass a matrix
+scalar use_matrices = 0			# 0: pass a list, 1: pass a matrix
 
 # Initialize empty bundle
 #-------------------------
@@ -310,19 +324,20 @@ endif
 # Select cross-validation type (optional)
 #-----------------------------------------
 # b.win_size = 6				# optional: window-width for 'recwin'/'rolwin'
-# b.n_folds = 2			# optional: divide sample into n_folds of groups for 'kfold'
-b.cv_type = &quot;kfold&quot;			# 'kfold' (default), 'loo', 'recwin', 'rolwin'
+# b.n_folds = 3			# optional: divide sample into n_folds of groups for 'kfold'
+# b.cv_type = &quot;rolwin&quot;			# 'kfold' (default), 'loo', 'recwin', 'rolwin'
 
 
 # Pass bundle 'b' in pointer form + run
 #---------------------------------------
-bundle bout = CvDataSplitter(&amp;b)
-print bout
+CvDataSplitter(&amp;b)
+print b
+
 
 # Print training + test datasets stored as matrices
 #--------------------------------------------------
-eval bout.X_train[1]		# grab array of X for some training set
-eval bout.X_test[1]			# grab array of X for some test set
+eval b.X_train[3]		# grab array of X for some training set
+eval b.X_test[3]		# grab array of X for some test set
 </sample-script>
 </gretl-function-package>
 </gretl-functions>
