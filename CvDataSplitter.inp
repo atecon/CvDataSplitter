@@ -7,7 +7,7 @@
 */
 
 
-function bundle CvDataSplitter (bundle *b)
+function void CvDataSplitter (bundle *self)
 
     /*=======================*/
     /* Main package function */
@@ -15,8 +15,8 @@ function bundle CvDataSplitter (bundle *b)
 
     # Set up the bundle
     #==================
-    bundle self = default_cv_opts()
-    self = b + self		    		# override defaults
+    bundle b = default_cv_opts()
+    self = self + b		    		# override defaults
 
     # Initial checks
     #===============
@@ -42,7 +42,26 @@ function bundle CvDataSplitter (bundle *b)
         timefold(&self)
     endif
 
-    return self
+    # Clear some bundle elements
+    clear_bundle(&self)
+
+end function
+
+
+function void clear_bundle(bundle *self)
+    /* Helper function for dropping some bundle elements
+    before returning */
+
+    delete self.X
+    delete self.index
+
+    if self.cv_type!="recwin" || self.cv_type!="rolwin" 
+        delete self.win_size
+    endif
+    if self.cv_type=="recwin"
+        delete self.foldsize
+    endif
+        
 end function
 
 
@@ -60,7 +79,6 @@ end function
 
 function void check_bundle (bundle *self)
     /* Some initial checks for bundle completeness */
-
     if !inbundle(self, "X")
         funcerr "Provide a list or matrix with data entitled 'X'."
     endif
@@ -76,12 +94,11 @@ function void check_bundle (bundle *self)
 end function
 
 
-function bundle gen_xmatrices (bundle *self)
+function void gen_xmatrices (bundle *self)
 /* Helper function for generating an
     array for storing the output */
     matrices self.X_train = array(self.n_folds)
     matrices self.X_test = array(self.n_folds)
-    return self
 end function
 
 function scalar get_T(bundle *self)
@@ -90,7 +107,7 @@ function scalar get_T(bundle *self)
 end function
 
 
-function bundle kfold (bundle *self)
+function void kfold (bundle *self)
 /* Function for running kfold and loo
 
    Splits data in train/test sets.
@@ -159,11 +176,10 @@ function bundle kfold (bundle *self)
         ende = (i==self.n_folds) ? (ende+rest) : ende
     endloop
 
-    return self
 end function
 
 
-function bundle timefold (bundle *self)
+function void timefold (bundle *self)
     /* Function for either rolling or recursive window splits when working
     with time-series data.
     See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html#sklearn.model_selection.TimeSeriesSplit
@@ -223,6 +239,5 @@ function bundle timefold (bundle *self)
         ende++
     endloop
     
-    return self
 end function
 

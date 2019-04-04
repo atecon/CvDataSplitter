@@ -29,8 +29,8 @@ CvDataSplitter()
 
 Parameters:
 ===========
-The user needs to pass a bundle in pointer form to the function
-CvDataSplitter() which includes at least:
+The user needs to pass some bundle 'b' in pointer form to the function
+CvDataSplitter(), e.g. <CvDataSplitter(&b)>, which includes at least:
 (i) A list named 'X' with k series, or a matrix named 'X' with T rows
 and k columns.
 In case a matrix 'X' was passed, the user additionally needs to pass
@@ -55,7 +55,7 @@ win_size	-- int, (Initial) Window-width for moving-window related
 
 Returns:
 =========
-The function returns the following information to the bundle:
+The function returns the following information to the bundle 'b':
 X_train		-- array of 'n_folds' matrices, each matrix is of dimension
 		T(i) by (1+k) (for i=1,2,...) holding the observation
 		index in the 1st column and the training data for k

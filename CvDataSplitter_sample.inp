@@ -1,8 +1,8 @@
 clear 
 set verbose off
 
-include CvDataSplitter.gfn --force
-#include "/home/at/git/cv_data_splitter/CvDataSplitter.inp"
+#include CvDataSplitter.gfn --force
+include "/home/at/git/cv_data_splitter/CvDataSplitter.inp"
 
 # EXAMPLE
 #=========
@@ -20,7 +20,7 @@ smpl --no-missing L
 
 # Select method:
 #---------------
-scalar use_matrices = 0		# 0: pass a list, 1: pass a matrix
+scalar use_matrices = 0			# 0: pass a list, 1: pass a matrix
 
 # Initialize empty bundle
 #-------------------------
@@ -39,16 +39,17 @@ endif
 # Select cross-validation type (optional)
 #-----------------------------------------
 # b.win_size = 6				# optional: window-width for 'recwin'/'rolwin'
-# b.n_folds = 2			# optional: divide sample into n_folds of groups for 'kfold'
-b.cv_type = "kfold"			# 'kfold' (default), 'loo', 'recwin', 'rolwin'
+# b.n_folds = 3			# optional: divide sample into n_folds of groups for 'kfold'
+# b.cv_type = "rolwin"			# 'kfold' (default), 'loo', 'recwin', 'rolwin'
 
 
 # Pass bundle 'b' in pointer form + run
 #---------------------------------------
-bundle bout = CvDataSplitter(&b)
-print bout
+CvDataSplitter(&b)
+print b
+
 
 # Print training + test datasets stored as matrices
 #--------------------------------------------------
-eval bout.X_train[1]		# grab array of X for some training set
-eval bout.X_test[1]			# grab array of X for some test set
+eval b.X_train[3]		# grab array of X for some training set
+eval b.X_test[3]		# grab array of X for some test set
