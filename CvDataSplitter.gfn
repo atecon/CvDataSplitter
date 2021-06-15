@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gretl-functions>
-<gretl-function-package name="CvDataSplitter" minver="2018a">
+<gretl-function-package name="CvDataSplitter" minver="2020a">
 <author email="atecon@posteo.de">Artur Tarassow</author>
-<version>0.1</version>
-<date>2019-03-31</date>
+<version>0.2</version>
+<date>2021-06-15</date>
 <description>Compile cross-validation datasets</description>
 <tags>C52</tags>
 <help>
-*** CV-DATA-SPLITTER ***
-
 Package for generating datasets for cross-validation purposes.
 
 Learning parameters of a prediction function is a major objective. In order
@@ -29,7 +27,7 @@ for the original model training and evaluation.
 Written by: Artur Tarassow (atecon@posteo.de)
 
 Github project page &amp; pull requests:
-https://github.com/atecon/cv_data_splitter
+https://github.com/atecon/CvDataSplitter
 
 
 Public Function:
@@ -43,7 +41,7 @@ CvDataSplitter(), e.g. &lt;CvDataSplitter(&amp;b)&gt;, which includes at least:
 (i) A list named 'X' with k series, or a matrix named 'X' with T rows
 and k columns.
 In case a matrix 'X' was passed, the user additionally needs to pass
-(ii) a column vector named 'index' refering to the T observations (can
+(ii) a column vector named 'index' referring to the T observations (can
 be easily generated via gretl by 'genr index').
 
 Additionally, the user can optionally specify the following 2 parameters:
@@ -72,6 +70,18 @@ X_train		-- array of 'n_folds' matrices, each matrix is of dimension
 X_test		-- array of 'n_folds' matrices, each matrix is of dimension
 		T(j) by (1+k) (j=1,2,...) holding the observation index in the
 		1st column and the test data for k variables across columns.
+
+
+
+## Changelog
+
+### v0.2 (June 2021)
+- Fix typos
+- Catch error if number of folds exceeds number of observations.
+- Minimum gretl version required is now 2020a
+
+### v0.1 (March 2019)
+- Initial version
 </help>
 <gretl-function name="CvDataSplitter" type="void">
  <params count="1">
@@ -87,7 +97,7 @@ self = self + b		    		# override defaults
 # Initial checks
 #===============
 check_bundle(&amp;self)
-# Drop missings
+# Drop missing
 #==============
 # TODO: think about how to handle NAs
 #    smpl --no-missing y X
@@ -192,11 +202,11 @@ if typeof(X)==2 || typeof(X)==7
 else
   matrix index  = self.index
 endif
-# Generate test/trainig arrays
+# Generate test/training arrays
 gen_xmatrices(&amp;self)
-# Lenght of each test sample
+# Length of each test sample
 scalar T = get_T(&amp;self)
-scalar self.foldsize = int(T/self.n_folds)			# lengt of test sample
+scalar self.foldsize = int(T/self.n_folds)			# length of test sample
 scalar rest = T - self.n_folds*self.foldsize		# no. of remainder obs for last iteration
 # Initial test set indices
 scalar start = min(index)
@@ -245,12 +255,14 @@ if typeof(X)==2 || typeof(X)==7
 else
   matrix index  = self.index
 endif
-# Lenght of each test sample
+# Length of each test sample
 scalar T = get_T(&amp;self)
-scalar self.foldsize = self.win_size			# lengt of (initial) test sample
+scalar self.foldsize = self.win_size			# length of (initial) test sample
 #    scalar rest = T-self.n_folds*self.foldsize	# no. of remainder obs for last iteration
-# Generate test/trainig arrays
-scalar self.n_folds = T-self.foldsize		# T-1 training sets can be compiled
+# Generate test/training arrays
+scalar self.n_folds = T - self.foldsize		# T-1 training sets can be compiled
+errorif(self.n_folds &lt; 0, sprintf(&quot;Parameter 'foldsize' (=%d) cannot exceed number of observations 'T' (=%d).&quot;, self.foldsize, T))
+flush
 gen_xmatrices(&amp;self)
 # Initial test set indices
 scalar start = min(index)

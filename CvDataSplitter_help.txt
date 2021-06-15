@@ -1,5 +1,3 @@
-*** CV-DATA-SPLITTER ***
-
 Package for generating datasets for cross-validation purposes.
 
 Learning parameters of a prediction function is a major objective. In order
@@ -20,7 +18,7 @@ for the original model training and evaluation.
 Written by: Artur Tarassow (atecon@posteo.de)
 
 Github project page & pull requests:
-https://github.com/atecon/cv_data_splitter
+https://github.com/atecon/CvDataSplitter
 
 
 Public Function:
@@ -34,7 +32,7 @@ CvDataSplitter(), e.g. <CvDataSplitter(&b)>, which includes at least:
 (i) A list named 'X' with k series, or a matrix named 'X' with T rows
 and k columns.
 In case a matrix 'X' was passed, the user additionally needs to pass
-(ii) a column vector named 'index' refering to the T observations (can
+(ii) a column vector named 'index' referring to the T observations (can
 be easily generated via gretl by 'genr index').
 
 Additionally, the user can optionally specify the following 2 parameters:
@@ -63,3 +61,15 @@ X_train		-- array of 'n_folds' matrices, each matrix is of dimension
 X_test		-- array of 'n_folds' matrices, each matrix is of dimension
 		T(j) by (1+k) (j=1,2,...) holding the observation index in the
 		1st column and the test data for k variables across columns.
+
+
+
+## Changelog
+
+### v0.2 (June 2021)
+- Fix typos
+- Catch error if number of folds exceeds number of observations.
+- Minimum gretl version required is now 2020a
+
+### v0.1 (March 2019)
+- Initial version

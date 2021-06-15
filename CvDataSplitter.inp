@@ -22,7 +22,7 @@ function void CvDataSplitter (bundle *self)
     #===============
     check_bundle(&self)
 
-    # Drop missings
+    # Drop missing
     #==============
     # TODO: think about how to handle NAs
     #    smpl --no-missing y X
@@ -132,12 +132,12 @@ function void kfold (bundle *self)
         matrix index  = self.index
     endif
 
-    # Generate test/trainig arrays
+    # Generate test/training arrays
     gen_xmatrices(&self)
 
-    # Lenght of each test sample
+    # Length of each test sample
     scalar T = get_T(&self)
-    scalar self.foldsize = int(T/self.n_folds)			# lengt of test sample
+    scalar self.foldsize = int(T/self.n_folds)			# length of test sample
     scalar rest = T - self.n_folds*self.foldsize		# no. of remainder obs for last iteration
 
     # Initial test set indices
@@ -194,13 +194,18 @@ function void timefold (bundle *self)
         matrix index  = self.index
     endif
 
-    # Lenght of each test sample
+    # Length of each test sample
     scalar T = get_T(&self)
-    scalar self.foldsize = self.win_size			# lengt of (initial) test sample
+    scalar self.foldsize = self.win_size			# length of (initial) test sample
     #    scalar rest = T-self.n_folds*self.foldsize	# no. of remainder obs for last iteration
 
-    # Generate test/trainig arrays
-    scalar self.n_folds = T-self.foldsize		# T-1 training sets can be compiled
+    # Generate test/training arrays
+    scalar self.n_folds = T - self.foldsize		# T-1 training sets can be compiled
+
+    errorif(self.n_folds < 0,\
+            sprintf("Parameter 'foldsize' (=%d) cannot exceed number of observations 'T' (=%d).", self.foldsize, T))
+    flush
+
     gen_xmatrices(&self)
 
     # Initial test set indices
