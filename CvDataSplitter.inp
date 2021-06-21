@@ -111,6 +111,8 @@ function void kfold (bundle *self)
    See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
     */
 
+    set skip_missing off
+
     # No. of folds
     self.n_folds = (self.cv_type=="loo") ? $nobs : self.n_folds
 
@@ -167,6 +169,7 @@ function void kfold (bundle *self)
         ende = (i==self.n_folds) ? (ende+rest) : ende
     endloop
 
+    set skip_missing on
 end function
 
 
@@ -175,6 +178,8 @@ function void timefold (bundle *self)
     with time-series data.
     See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html#sklearn.model_selection.TimeSeriesSplit
     */
+
+    set skip_missing off
 
     # Read-in frame
     X = self.X
@@ -235,5 +240,6 @@ function void timefold (bundle *self)
         ende++
     endloop
     
+    set skip_missing on
 end function
 

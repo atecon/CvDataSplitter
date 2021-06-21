@@ -2,8 +2,8 @@
 <gretl-functions>
 <gretl-function-package name="CvDataSplitter" minver="2020a">
 <author email="atecon@posteo.de">Artur Tarassow</author>
-<version>0.2</version>
-<date>2021-06-16</date>
+<version>0.3</version>
+<date>2021-06-21</date>
 <description>Compile cross-validation datasets</description>
 <tags>C52</tags>
 <help>
@@ -74,6 +74,9 @@ X_test		-- array of 'n_folds' matrices, each matrix is of dimension
 
 
 ## Changelog
+
+### v0.3 (June 2021)
+- Avoid dimension mismatch when concatenating index series with X matrix for both functions kfold() and timefold() in case of missing values.
 
 ### v0.2 (June 2021)
 - Fix typos
@@ -192,6 +195,7 @@ folds form the training set.
 'loo' is a special case of 'kfold' with a single obs. left-out for each fold
 See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
 */
+set skip_missing off
 # No. of folds
 self.n_folds = (self.cv_type==&quot;loo&quot;) ? $nobs : self.n_folds
 # Read-in frame
@@ -237,6 +241,7 @@ loop i=1..self.n_folds -q
   ende = start + self.foldsize-1
   ende = (i==self.n_folds) ? (ende+rest) : ende
 endloop
+set skip_missing on
 </code>
 </gretl-function>
 <gretl-function name="timefold" type="void" private="1">
@@ -247,6 +252,7 @@ endloop
 with time-series data.
 See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html#sklearn.model_selection.TimeSeriesSplit
 */
+set skip_missing off
 # Read-in frame
 X = self.X
 # Index
@@ -293,6 +299,7 @@ loop i=1..self.n_folds -q
   start = (self.cv_type==&quot;rolwin&quot;) ? (start+1) : start
   ende++
 endloop
+set skip_missing on
 </code>
 </gretl-function>
 <sample-script>

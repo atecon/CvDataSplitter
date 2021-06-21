@@ -66,6 +66,9 @@ X_test		-- array of 'n_folds' matrices, each matrix is of dimension
 
 ## Changelog
 
+### v0.3 (June 2021)
+- Avoid dimension mismatch when concatenating index series with X matrix for both functions kfold() and timefold() in case of missing values.
+
 ### v0.2 (June 2021)
 - Fix typos
 - Catch error if number of folds exceeds number of observations.
